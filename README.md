@@ -4,6 +4,9 @@ REQUIREMENTS
 - Python 3
 - Pillow library
 
+!!! Pillow IS Already Installed On Blue !!!
+(don't do below intsallation if running on blue)
+
 INSTALLATION
 Install Pillow by running:
   pip install Pillow
