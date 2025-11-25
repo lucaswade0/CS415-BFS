@@ -109,18 +109,27 @@ def bestFS(img, vertexStart, vertexDest):
 
     # Initialize data structures
     visited = {}
+    fScore = {}
     distance = {}
     prev = {}
 
     for i in range(width):
         for j in range(height):
             distance[(i, j)] = sys.maxsize
+            fScore[(i,j)] = sys.maxsize
             visited[(i, j)] = False
 
     # Initialize priority queue
     Q = []
+
+    # g(s) = 0
+    distance[vertexStart] = 0
+
+    # f(s) = g(s) + h(s) = 0 + h(s)
     hStart = calculateH(vertexStart, vertexDest)
-    distance[vertexStart] = hStart
+    fScore[vertexStart] = hStart
+    
+    # PQ stores (f-score, vertex)
     heapq.heappush(Q, (distance[vertexStart], vertexStart))
     img.putpixel(vertexStart, (0, 0, 255))  # Start Blue
 
@@ -129,6 +138,7 @@ def bestFS(img, vertexStart, vertexDest):
 
     # Best-First Search
     while Q:
+        # u = vertex with the minimum f-score
         f, currentU = heapq.heappop(Q)
 
         if visited[currentU]:
@@ -136,26 +146,37 @@ def bestFS(img, vertexStart, vertexDest):
 
         visited[currentU] = True
 
+        # Color the visited node (GREEN)
+        # Only color if not the start/end and not already colored
+        if currentU != vertexStart and currentU != vertexDest:
+            img.putpixel(currentU, (0, 255, 0))
+
         if currentU == vertexDest:
             break
 
         for direction in directions:
-            neighborX, neighborY = currentU[0] + direction[0], currentU[1] + direction[1]
+            neighbor = (currentU[0] + direction[0], currentU[1] + direction[1])
+            neighborX, neighborY = neighbor
 
             if 0 <= neighborX < width and 0 <= neighborY < height:
-                if not visited[(neighborX, neighborY)]:
-                    # Check if neighbor is a valid vertex
-                    if is_valid_vertex(img, neighborX, neighborY):
+                # Check if neighbor is a valid vertex
+                if is_valid_vertex(img, neighborX, neighborY):
+                    
+                    # Tentative g-score (distance from start) to neighbor
+                    tentative_g_score = distance[currentU] + 1
+                    
+                    # If this path is better than any previously found path to neighbor
+                    if tentative_g_score < distance[neighbor]:
+                        # Update the path and g-score
+                        prev[neighbor] = currentU
+                        distance[neighbor] = tentative_g_score
 
-                        newDist = distance[currentU] + 1
-                        if newDist < distance[(neighborX, neighborY)]:
-                            distance[(neighborX, neighborY)] = newDist
-                            prev[(neighborX, neighborY)] = currentU
-
-                            img.putpixel((neighborX, neighborY), (0, 255, 0))  # Green
-                            hValue = calculateH((neighborX, neighborY), vertexDest)
-                            fscore = newDist + hValue
-                            heapq.heappush(Q, (fscore, (neighborX, neighborY)))
+                        # Calculate and update f-score
+                        hValue = calculateH(neighbor, vertexDest)
+                        fScore[neighbor] = tentative_g_score + hValue
+                        
+                        # Add or update in the priority queue
+                        heapq.heappush(Q, (fScore[neighbor], neighbor))
 
 
     # Check if destination was reached
@@ -165,9 +186,11 @@ def bestFS(img, vertexStart, vertexDest):
 
     # Trace back the path and color it red
     v = vertexDest
-    while v != vertexStart:
+    path_length = 0
+    while v in prev:
         img.putpixel(v, (255, 0, 0))  # Red
         v = prev[v]
+        path_length += 1
 
     return distance[vertexDest]
 
@@ -181,11 +204,6 @@ def main():
     except Exception as e:
         print(f"ERROR: Could not open image file '{filename}': {e}")
         return
-    
-    viewImage = input("Do you want to view the image before starting? (y/n): ").strip().lower()
-    if viewImage == 'y':
-        img1.show()
-
 
     # Display valid coordinate ranges
     print(f"\nImage dimensions: {img1.width} x {img1.height}")
@@ -224,8 +242,8 @@ def main():
     print("Start Vertex will be colored Blue in output images to indicate the starting point.")
 
     # Get output file names
-    outputFile1 = input("\nEnter output file name for BFS result: ")
-    outputFile2 = input("Enter output file name for Best-First Search result: ")
+    outputFile1 = input("\nEnter output file name for BFS result (no file extension needed, defaults to .bmp): ")
+    outputFile2 = input("Enter output file name for Best-First Search result (no file extension needed, defaults to .bmp): ")
 
     # Automatically append .bmp extension
     outputFile1 = outputFile1 + ".bmp"
